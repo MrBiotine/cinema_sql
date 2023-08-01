@@ -7,114 +7,119 @@ FROM movie m
 INNER JOIN director d                                                                                                                      
 ON d.id_director = m.director_id                                                                                                           
 INNER JOIN staff s                                                                                                                          
-ON s.id_staff = d.staff_id                                                                                        --LIMIT permet d'afficher la première référence
+ON s.id_staff = d.staff_id /*LIMIT => Limit line display to required number*/
 
---b. Liste des films dont la durée excède 2h15 classés par durée (du + long au + court)
+--b. List of films whose duration exceeds 2h15, sorted by length (from longest to shortest)
 
-SELECT f.titre, SEC_TO_TIME(f.duree*60) AS Durée                                                --SELECT Permet de retourner des enregistrements dans un tableau de résultat. Cette commande peut sélectionner une ou plusieurs colonnes d’une table.
-FROM film f                                                                                     
-WHERE f.duree > 135
-ORDER BY Durée DESC                                                                             --ORDER BY Pour afficher par ordre décroissant        
+SELECT m.title, SEC_TO_TIME(m.duration*60) Durée
+FROM movie m                                                
+WHERE m.duration > 135
+ORDER BY m.duration DESC                                                                                      
 
---c. Liste des films d’un réalisateur (en précisant l’année de sortie) 
+--c. List of films by director (specifying year of release) 
 
-SELECT f.titre, f.annee_sortie, p.nom, p.prenom
-FROM film f
-INNER JOIN realisateur r
-ON f.id_realisateur = r.id_realisateur
-INNER JOIN personne p
-ON r.id_realisateur = p.id_personne
-AND r.id_realisateur = 1
+SELECT m.title, DATE_FORMAT(m.release_date,'%Y') parution, s.firstname, s.lastname
+FROM movie m
+INNER JOIN director d
+ON m.director_id = d.id_director
+INNER JOIN staff s
+ON d.id_director = s.id_staff
+AND d.id_director= 1
 
---d. Nombre de films par genre (classés dans l’ordre décroissant)
+--d. Number of films by genre (in descending order)
 
-SELECT g.type, COUNT(c.id_film) AS Nombre_film                                                  --La fonction COUNT() permet de compter le nombre de films, il est d'usage de compter les id plutôt que les noms
-FROM genre_film g
-INNER JOIN classer c
-ON g.genre_film = c.genre_film
-GROUP BY g.type                                                                                 --Lorsqu'il y a une fonction dans la commande SELECT et deux tables il faut faire une jointure avec INNER JOIN 
-ORDER BY Nombre_film DESC                                                                       --et il faut également utiliser un GROUP BY, il est d'usage de grouper les id plutôt que les noms                                
+SELECT g.label, COUNT(c.movie_id) Film_number
+FROM genre g                                                 
+INNER JOIN movie_genre_link c
+ON g.id_genre = c.genre_id
+GROUP BY g.label                                                                                 
+ORDER BY Film_number DESC                                                                                                   
 
---e. Nombre de films par réalisateur (classés dans l’ordre décroissant)
+--e. Number of films by director (in descending order)
 
-SELECT p.nom, p.prenom, COUNT(f.id_film) AS Nombre_film
-FROM realisateur r
-INNER JOIN film f
-ON f.id_realisateur = r.id_realisateur
-INNER JOIN personne p
-ON r.id_personne = p.id_personne
-GROUP BY r.id_realisateur
-ORDER BY Nombre_film DESC
+SELECT s.firstname,s.lastname,  COUNT(m.id_movie) Film_number
+FROM director d
+INNER JOIN movie m
+ON m.director_id = d.id_director
+INNER JOIN staff s
+ON d.staff_id = s.id_staff
+GROUP BY d.id_director
+ORDER BY Film_number DESC
 
---f. Casting d’un film en particulier (id_film) : nom, prénom des acteurs + sexe
+--f. Film casting by id (id_film): first and last names of actors + gender
 
-SELECT c.id_film, p.nom, p.prenom, p.sexe
+SELECT c.movie_id, s.firstname, s.lastname, s.gender
 FROM casting c
-INNER JOIN acteur a
-ON a.id_acteur = c.id_acteur
-INNER JOIN personne p
-ON p.id_personne = a.id_personne
-AND c.id_film = 1
+INNER JOIN actor a
+ON a.id_actor = c.actor_id
+INNER JOIN staff s
+ON s.id_staff = a.staff_id
+AND c.movie_id = 1
 
---g. Films tournés par un acteur en particulier (id_acteur) avec leur rôle et l’année de sortie (du film le plus récent au plus ancien)
+--g. Films shot by a particular actor (id_acteur) with their role and year of release (from most recent to oldest film)
 
-SELECT c.id_acteur, r.nom, r.prenom, r.pseudo, f.titre, f.annee_sortie
+SELECT c.actor_id, r.name, m.title, m.release_date parution
 FROM casting c
-INNER JOIN role_acteur r
-ON r.role_acteur = c.role_acteur
-INNER JOIN film f
-ON f.id_film = c.id_film
-AND c.id_acteur = 2
-ORDER BY f.annee_sortie DESC
+INNER JOIN role r
+ON r.id_role = c.role_id
+INNER JOIN movie m
+ON m.id_movie = c.movie_id
+AND c.actor_id = 2
+ORDER BY parution DESC
 
---h. Liste des personnes qui sont à la fois acteurs et réalisateurs
+--h. Staff members who are both actors and directors
 
-SELECT p.prenom, p.nom
-FROM personne p
-INNER JOIN acteur a
-ON a.id_personne = p.id_personne
-INNER JOIN realisateur r
-ON r.id_personne = p.id_personne
+SELECT s.firstname, s.lastname
+FROM staff s
+INNER JOIN actor a
+ON a.staff_id = s.id_staff
+INNER JOIN director d
+ON d.staff_id = s.id_staff
 
---i. Liste des films qui ont moins de 5 ans (classés du plus récent au plus ancien)
+--i. List of films less than 5 years old (sorted from most recent to oldest)
 
-SELECT f.titre, f.annee_sortie
-FROM film f
-WHERE f.annee_sortie > 2018
-ORDER BY f.annee_sortie DESC
+SELECT m.title, DATE_FORMAT(m.release_date,'%Y') parution
+FROM movie m
+HAVING parution > 2018
+ORDER BY parution DESC
 
---j. Nombre d’hommes et de femmes parmi les acteurs
+--j. Number of male and female actors
 
-SELECT COUNT(a.id_acteur) AS Nombre_Acteur, p.sexe
-FROM personne p
-INNER JOIN acteur a
-ON a.id_personne = p.id_personne
-GROUP BY p.sexe
+SELECT COUNT(a.id_actor) actor_number, s.gender
+FROM staff s
+INNER JOIN actor a
+ON a.staff_id = s.id_staff
+GROUP BY s.gender
 
---k. Liste des acteurs ayant plus de 50 ans (âge révolu et non révolu)
+--k. List of actors over 50 years of age (both past and present)
 
-SELECT p.prenom, p.nom, (                               --DATE FORMAT Permet de modifier le format d'une date
-DATE_FORMAT                                             --(FROM_DAYS(TO_DAYS(1))-TO_DAYS(2)) Permet de comparer deux périodes (La date du jour(1) et la date de Naissance de l'acteur (2))
-(FROM_DAYS(TO_DAYS(NOW())-TO_DAYS(p.date_naissance)),   --NOW() permet de retourner la date et l’heure du jour (1).
-'%Y')+0)                                                --%Y : Choix de formatage pour afficher l'année, numérique (avec 4 digits) 
+/*DATE FORMAT Allows you to change the format of a date*/
+/*FROM_DAYS(TO_DAYS(1))-TO_DAYS(2)) Compares two periods (the current date (1) and the actor's date of birth (2)).*/
+/*NOW() returns today's date and time.*/
+/*Choice of formatting for year display, numeric (with 4 digits)*/
+
+SELECT s.firstname, s.lastname, (                               
+DATE_FORMAT                                             
+(FROM_DAYS(TO_DAYS(NOW())-TO_DAYS(s.birthdate)),   
+'%Y')+0)                                                
 AS Age 
-FROM personne p
-INNER JOIN acteur a
-ON p.id_personne = a.id_personne
-AND (DATE_FORMAT(FROM_DAYS(TO_DAYS(NOW())-TO_DAYS(p.date_naissance)), '%Y')+0) > 50
+FROM staff s
+INNER JOIN actor a
+ON s.id_staff = a.staff_id
+AND (DATE_FORMAT(FROM_DAYS(TO_DAYS(NOW())-TO_DAYS(s.birthdate)), '%Y')+0) > 50
 
---l. Acteurs ayant joué dans 3 films ou plus
+--l. Actors having played in 3 or more films
 
-SELECT p.prenom, p.nom, COUNT(c.id_film) AS Nombre_Film
-FROM personne p
-INNER JOIN acteur a
-ON a.id_personne = p.id_personne
+SELECT s.firstname, s.lastname, COUNT(c.movie_id) Number_films
+FROM staff s
+INNER JOIN actor a
+ON a.staff_id = s.id_staff
 INNER JOIN casting c
-ON c.id_acteur = a.id_acteur
-GROUP BY c.id_acteur
-HAVING Nombre_Film > 3                                  --HAVING Permet de filtrer une fonction
+ON c.actor_id = a.id_actor
+GROUP BY c.actor_id
+HAVING Number_films > 3                                 /*HAVING Allows you to filter a function*/
 
---INFORMATIONS--(--Pour Peupler la Base de données--)
+INFORMATION--(--To populate the database--)
 
 INSERT INTO movie (id_movie, title, release_date, duration, synopsis, notation, poster, director_id) VALUES
 (1, 'Star Wars Vol1', '1999-10-13', 136, 'Dans une galaxie une entre les Chevaliers Jedi et les Seigneurs noirs des Sith, personnes sensibles à la Force.', 6.2, 'film1.jpg', 1),
